@@ -1,0 +1,110 @@
+Vagrant.configure("2") do |config|
+  # Definindo a máquina web1
+  config.vm.define "web1" do |web1|
+    web1.vm.box = "ubuntu/bionic64"
+    web1.vm.network "private_network", ip: "192.168.66.121"
+    config.vm.synced_folder "shared/", "/vagrant"
+    web1.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+      vb.cpus = 2
+    end
+    web1.vm.disk :disk, size: "3GB", name: "sdb"
+    web1.vm.disk :disk, size: "3GB", name: "sdc"
+    web1.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/web/raid/setup_raid1.sh"
+    web1.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/web/gluster/glusterfs.sh"
+    web1.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/web/gluster/setup_glusterfs.sh"
+    web1.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/web/ngins/setup_nginx.sh"
+  end
+
+  # Definindo a máquina web2
+  config.vm.define "web2" do |web2|
+    web2.vm.box = "ubuntu/bionic64"
+    web2.vm.network "private_network", ip: "192.168.66.122"
+    config.vm.synced_folder "shared/", "/vagrant"
+    web2.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+      vb.cpus = 2
+    end
+    web2.vm.disk :disk, size: "3GB", name: "sdb"
+    web2.vm.disk :disk, size: "3GB", name: "sdc"
+    web2.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/web/raid/setup_raid1.sh"
+    web2.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/web/gluster/glusterfs.sh"
+    web2.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/web/gluster/mount_glusterfs.sh"
+    web2.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/web/ngins/setup_nginx2.sh"
+  end
+
+    # Definindo a máquina sql1
+  config.vm.define "sql1" do |sql1|
+    sql1.vm.box = "ubuntu/bionic64"
+    sql1.vm.network "private_network", ip: "192.168.66.111"
+    config.vm.synced_folder "shared/", "/vagrant"
+    sql1.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+
+    sql1.vm.provision "shell", inline: <<-SHELL
+          sudo hostnamectl set-hostname sql1
+          sudo reboot
+        SHELL
+     sql1.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/sql/glusterfs/gluster_sql1.sh"
+     sql1.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/sql/mariadb/setup_mariadb.sh"
+  end
+
+  # Definindo a máquina sql2
+  config.vm.define "sql2" do |sql2|
+    sql2.vm.box = "ubuntu/bionic64"
+    sql2.vm.network "private_network", ip: "192.168.66.112"
+    config.vm.synced_folder "shared/", "/vagrant"
+    sql2.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+    sql2.vm.provision "shell", inline: <<-SHELL
+          sudo hostnamectl set-hostname sql2
+          sudo reboot
+        SHELL
+           sql1.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/sql/glusterfs/gluster_sql2.sh"
+     sql2.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/sql/mariadb/setup_mariadb.sh"
+  end
+
+  # Definindo a máquina proxy1
+  config.vm.define "proxy1" do |proxy1|
+    proxy1.vm.box = "ubuntu/bionic64"
+    proxy1.vm.network "private_network", ip: "192.168.66.100"
+    proxy1.vm.network "private_network", ip: "172.20.66.200"
+    config.vm.synced_folder "shared/", "/vagrant"
+    proxy1.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+      vb.cpus = 2
+    end
+    proxy1.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/proxy/haproxy/haproxy.sh"
+  end
+
+  # Definindo a máquina proxy2
+  config.vm.define "proxy2" do |proxy2|
+    proxy2.vm.box = "ubuntu/bionic64"
+    proxy2.vm.network "private_network", ip: "192.168.66.101"
+    proxy2.vm.network "private_network", ip: "172.20.66.201"
+    config.vm.synced_folder "shared/", "/vagrant"
+    # proxy2.vm.network :forwarded_port, guest: 22, host: 2265
+    proxy2.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+      vb.cpus = 2
+    end
+    proxy2.vm.provision "shell", path: "/Users/kikin/Documents/Vagrant_SC/vagrant/shared/proxy/haproxy/haproxy.sh"
+  end
+  
+  config.vm.define "client" do |client|
+    client.vm.box = "chad-thompson/ubuntu-trusty64-gui"
+    client.vm.box_version = "1.0"
+    client.vm.hostname ="client.sc.com"
+    client.vm.network "private_network", ip: "172.20.66.10"
+    client.vm.provider "virtualbox" do |v|
+      v.gui = true
+      v.name = "client"
+      v.memory = 2048
+      v.cpus = 2
+    end
+  end
+end
